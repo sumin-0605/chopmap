@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bible Quest · Mobile Base</title>
+  <link href="https://fastly.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b0f1a;
+      --bg-soft: #0f1526;
+      --panel: #121a2f;
+      --ink: #f5f7ff;
+      --ink-dim: #c8d0ff;
+      --accent: #79a6ff;
+      --accent-2: #ffd66e;
+      --ok: #86efac;
+      --warn: #fca5a5;
+      --pixel: 4px;
+    }
+
+    :root[data-theme="light"] {
+      --bg: #f7f9ff;
+      --bg-soft: #eef2ff;
+      --panel: #fff;
+      --ink: #0f172a;
+      --ink-dim: #475569;
+      --accent: #3b82f6;
+      --accent-2: #eab308;
+      --ok: #16a34a;
+      --warn: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      height: 100%
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 800px at 50% -200px, #1a2547 0%, var(--bg) 50%, #060911 100%);
+      color: var(--ink);
+      font-family: "Galmuri11", system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Helvetica, Arial, sans-serif;
+      letter-spacing: .2px
+    }
+
+    body.lock {
+      overflow: hidden;
+      overscroll-behavior: contain
+    }
+
+    .wrap {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 12px
+    }
+
+    .hud {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: linear-gradient(180deg, rgba(10, 14, 27, .85), rgba(10, 14, 27, .35));
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid rgba(255, 255, 255, .06)
+    }
+
+    :root[data-theme="light"] .hud {
+      background: linear-gradient(180deg, rgba(255, 255, 255, .85), rgba(255, 255, 255, .5))
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+      margin-top: 1rem
+    }
+
+    :root[data-theme="light"] .panel {
+      border-color: rgba(0, 0, 0, .06);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .08)
+    }
+
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      font-weight: 700;
+      text-transform: uppercase;
+      border: 2px solid var(--ink);
+      background: linear-gradient(180deg, #1f2c55, #152041);
+      border-radius: 12px;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--ink)
+    }
+
+    :root[data-theme="light"] .cta {
+      background: linear-gradient(180deg, #e5ecff, #d6e3ff);
+      border-color: rgba(15, 23, 42, .8)
+    }
+
+    .cta:active {
+      transform: translateY(1px)
+    }
+
+    .cta.blink {
+      animation: blink 1s step-end infinite
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: .45
+      }
+    }
+
+    .pixel {
+      position: relative;
+      border: var(--pixel) solid #2a3c73;
+      box-shadow: 0 0 0 calc(var(--pixel)*2) #18234a, 0 0 0 calc(var(--pixel)*3) #0e1633;
+      border-radius: 10px
+    }
+
+    :root[data-theme="light"] .pixel {
+      border-color: #c7d2fe;
+      box-shadow: 0 0 0 calc(var(--pixel)*2) #e0e7ff, 0 0 0 calc(var(--pixel)*3) #c7d2fe
+    }
+
+    #introScreen {
+      display: grid;
+      place-items: center;
+      min-height: 77.5dvh;
+      text-align: center;
+      gap: 18px
+    }
+
+    .title {
+      font-size: 28px;
+      line-height: 1.1;
+      letter-spacing: .5px;
+      text-shadow: 0 2px 0 #08102a, 0 4px 14px rgba(121, 166, 255, .55)
+    }
+
+    :root[data-theme="light"] .title {
+      text-shadow: none
+    }
+
+    .subtitle {
+      color: var(--ink-dim);
+      font-size: 12px;
+      opacity: .9
+    }
+
+    .meters {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      padding: 10px 12px
+    }
+
+    .bar {
+      background: #0c1327;
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 10px;
+      overflow: hidden;
+      height: 22px;
+      position: relative
+    }
+
+    :root[data-theme="light"] .bar {
+      background: #e2e8f0;
+      border-color: rgba(0, 0, 0, .08)
+    }
+
+    .bar>.fill {
+      height: 100%;
+      width: 0%;
+      transition: width .45s ease;
+      background: linear-gradient(90deg, #4f7cff, #6fa8ff 60%, #a4c6ff);
+      box-shadow: inset 0 0 12px rgba(121, 166, 255, .65)
+    }
+
+    .bar.hp>.fill {
+      background: linear-gradient(90deg, #2ed47a, #54ef9b 60%, #9bf4c4)
+    }
+
+    .bar.mp>.fill {
+      background: linear-gradient(90deg, #a78bfa, #c4b5fd 60%, #e9d5ff)
+    }
+
+    .bar .label {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      color: #e9edff;
+      text-shadow: 0 1px 0 #000;
+      line-height: 1
+    }
+
+    :root[data-theme="light"] .bar .label {
+      color: #0f172a;
+      text-shadow: none
+    }
+
+    #mapScreen {
+      display: none
+    }
+
+    .map {
+      display: grid;
+      gap: 12px;
+      margin: 16px 0
+    }
+
+    .stage {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      background: var(--bg-soft);
+      border: 1px dashed rgba(255, 255, 255, .18);
+      border-radius: 12px;
+      position: relative
+    }
+
+    :root[data-theme="light"] .stage {
+      border-color: rgba(0, 0, 0, .12)
+    }
+
+    .stage.today {
+      border-color: var(--accent-2);
+      box-shadow: 0 0 0 2px rgba(255, 214, 110, .25) inset, 0 0 22px rgba(255, 214, 110, .18)
+    }
+
+    .stage.locked {
+      opacity: .85
+    }
+
+    .stage .node {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #1f2a4b;
+      border: 2px solid #92abff;
+      font-weight: 800
+    }
+
+    :root[data-theme="light"] .stage .node {
+      background: #e0e7ff;
+      border-color: #93c5fd
+    }
+
+    .stage .info {
+      display: grid;
+      gap: 2px
+    }
+
+    .stage .info .day {
+      font-size: 12px;
+      color: var(--ink-dim)
+    }
+
+    .stage .info .text {
+      font-size: 14px
+    }
+
+    .stage .reward {
+      font-size: 11px;
+      color: #cfe0ff;
+      opacity: .85
+    }
+
+    :root[data-theme="light"] .stage .reward {
+      color: #334155
+    }
+
+    .stage .clear {
+      font-size: 11px;
+      color: var(--ok);
+      display: none
+    }
+
+    .stage.cleared .clear {
+      display: inline
+    }
+
+    .go {
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      background: linear-gradient(180deg, #22305d, #17254a);
+      color: var(--ink);
+      font-weight: 800;
+      cursor: pointer
+    }
+
+    :root[data-theme="light"] .go {
+      background: linear-gradient(180deg, #dbeafe, #c7d2fe);
+      border-color: rgba(0, 0, 0, .12);
+      color: #0f172a
+    }
+
+    .go.lock {
+      opacity: .5;
+      cursor: not-allowed;
+      filter: grayscale(40%)
+    }
+
+    .prefs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 0 12px 8px
+    }
+
+    .pref-btn {
+      cursor: pointer;
+      user-select: none
+    }
+
+    #overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .8);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s ease;
+      z-index: 40;
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px)
+    }
+
+    #overlay.active {
+      opacity: 1;
+      pointer-events: auto
+    }
+
+    #questPanel {
+      position: fixed;
+      inset: auto 0 0 0;
+      transform: translateY(105%);
+      transition: transform .35s ease;
+      background: #0b1228;
+      border-top: 1px solid rgba(255, 255, 255, .1);
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, .55);
+      z-index: 50
+    }
+
+    :root[data-theme="light"] #questPanel {
+      background: #fff;
+      border-top-color: rgba(0, 0, 0, .06)
+    }
+
+    #questPanel.open {
+      transform: translateY(0%)
+    }
+
+    .quest-body {
+      padding: 16px;
+      display: grid;
+      gap: 12px
+    }
+
+    .quest-title {
+      font-size: 18px;
+      font-weight: 900
+    }
+
+    .quest-sub {
+      color: var(--ink-dim);
+      font-size: 12px
+    }
+
+    .quest-grid {
+      display: grid;
+      gap: 10px
+    }
+
+    .q-row {
+      display: grid;
+      gap: 6px
+    }
+
+    .chip {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      padding: 8px 10px;
+      background: #131c38;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--ink)
+    }
+
+    :root[data-theme="light"] .chip {
+      background: #eef2ff;
+      border-color: rgba(0, 0, 0, .08);
+      color: #0f172a
+    }
+
+    .btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px
+    }
+
+    .btn {
+      padding: 12px;
+      border-radius: 12px;
+      font-weight: 800;
+      text-align: center;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, .14);
+      background: linear-gradient(180deg, #1f2c55, #152041);
+      color: var(--ink)
+    }
+
+    .btn.warn {
+      background: linear-gradient(180deg, #3a1c22, #2a1116);
+      border-color: rgba(255, 99, 99, .35);
+      color: #ffb1b1
+    }
+
+    .btn.ok {
+      background: linear-gradient(180deg, #1f3a2a, #152a1e);
+      border-color: rgba(134, 239, 172, .35);
+      color: #caffe1
+    }
+
+    :root[data-theme="light"] .btn {
+      background: linear-gradient(180deg, #e5ecff, #d6e3ff);
+      border-color: rgba(0, 0, 0, .12);
+      color: #0f172a
+    }
+
+    :root[data-theme="light"] .btn.warn {
+      background: linear-gradient(180deg, #fee2e2, #fecaca);
+      color: #7f1d1d
+    }
+
+    :root[data-theme="light"] .btn.ok {
+      background: linear-gradient(180deg, #dcfce7, #bbf7d0);
+      color: #064e3b
+    }
+
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: 92px;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(20, 28, 56, .9);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease, transform .25s ease;
+      z-index: 60
+    }
+
+    :root[data-theme="light"] #toast {
+      background: rgba(0, 0, 0, .85)
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0)
+    }
+
+    .confetti-piece {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 12px;
+      transform-origin: center;
+      pointer-events: none;
+      z-index: 60;
+      opacity: 0;
+      animation: confetti-pop 700ms ease-out forwards
+    }
+
+    @keyframes confetti-pop {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) rotate(0deg) scale(.8)
+      }
+
+      100% {
+        opacity: 1;
+        transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1)
+      }
+    }
+
+    .shake {
+      animation: shakeX .35s ease
+    }
+
+    @keyframes shakeX {
+
+      0%,
+      100% {
+        transform: translateX(0)
+      }
+
+      20% {
+        transform: translateX(-6px)
+      }
+
+      40% {
+        transform: translateX(6px)
+      }
+
+      60% {
+        transform: translateX(-4px)
+      }
+
+      80% {
+        transform: translateX(4px)
+      }
+    }
+
+    .danger {
+      border-color: #ff7070 !important;
+      box-shadow: 0 0 0 2px rgba(255, 99, 99, .25) inset
+    }
+
+    .hidden {
+      display: none !important
+    }
+
+    @supports(padding:max(0px)) {
+      #questPanel {
+        padding-bottom: max(14px, env(safe-area-inset-bottom))
+      }
+    }
+
+    /* 진행 초기화 링크 색 고정 (퍼플 방지) */
+.link,
+.link:link,
+.link:visited {
+  color: var(--accent-2);
+  text-decoration: none;
+  font-weight: 800;
+}
+.link:hover { text-decoration: underline; text-underline-offset: 2px; }
+.link:active { opacity: .85; }
+
+  </style>
+</head>
+
+<body>
+  <div class="hud">
+    <div class="wrap">
+      <div class="meters">
+        <div class="bar hp pixel" aria-label="믿음(HP)">
+          <div class="fill" id="hpFill"></div>
+          <div class="label"><span id="hpLabel">HP 0/700</span></div>
+        </div>
+        <div class="bar mp pixel" aria-label="기도력(MP)">
+          <div class="fill" id="mpFill"></div>
+          <div class="label"><span id="mpLabel">MP 0/700</span></div>
+        </div>
+        <div class="bar xp pixel" aria-label="지혜(EXP)">
+          <div class="fill" id="xpFill"></div>
+          <div class="label"><span id="xpLabel">EXP 0/0</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section id="introScreen" class="wrap">
+
+    <div class="panel pixel" style="padding:28px 18px;">
+      <div class="title">✝️ BIBLE QUEST</div>
+      <div class="subtitle" style="margin-top: 10px;">시편에서 잠언으로, 한 주간의 지혜 던전!</div>
+      <div style="height:15px;"></div>
+      <a id="startBtn" class="cta blink" href="#">PRESS START</a>
+      <div style="height:15px"></div>
+      <div class="subtitle">모바일 기준 · iPhone SE 너비 최적화 <br/>(기기에 따라 비율이 조금 틀어질 수 있습니다!)</div>
+    </div>
+    <div class="prefs" style="margin-top: 2rem;">
+      <button id="themeToggle" class="chip pref-btn">🌗 테마: <strong id="themeLabel"
+          style="margin-left:6px;">다크</strong></button>
+      <button id="soundToggle" class="chip pref-btn">🔊 사운드: <strong id="soundLabel"
+          style="margin-left:6px;">OFF</strong></button>
+    </div>
+  </section>
+
+
+  <section id="mapScreen" class="wrap">
+    <div class="topbar">
+      <div>
+        <div style="font-weight:900;font-size:14px">🗺️ 스테이지 맵 (월→일)</div>
+        <div class="small">오늘 스테이지는 노란 테두리로 반짝!</div>
+      </div>
+      <a id="resetBtn" class="link" href="#">진행 초기화</a>
+    </div>
+
+    <div class="prefs">
+      <button id="themeToggle" class="chip pref-btn">🌗 테마: <strong id="themeLabel"
+          style="margin-left:6px;">다크</strong></button>
+      <button id="soundToggle" class="chip pref-btn">🔊 사운드: <strong id="soundLabel"
+          style="margin-left:6px;">OFF</strong></button>
+    </div>
+
+    <div id="stageList" class="map"></div>
+  </section>
+
+  <div id="overlay"></div>
+  <div id="toast"></div>
+
+  <aside id="questPanel" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="quest-body wrap">
+      <div class="quest-title" id="qpTitle">MAIN QUEST</div>
+      <div class="quest-sub" id="qpSub">오늘의 본문을 읽고 완료로 표시해요!</div>
+
+      <div class="quest-grid">
+        <div class="q-row">
+          <div class="chip">📖 <span id="qpRange">시편 132–134편</span></div>
+          <div class="chip">🏆 보상: <span id="qpReward">+100 EXP</span></div>
+        </div>
+        <div class="q-row"><a id="qpReadLink" class="cta" target="_blank" rel="noopener">본문 읽기 열기</a></div>
+      </div>
+
+      <div id="quizBox" class="panel pixel hidden" style="margin-top:10px;">
+        <div style="font-weight:900;margin-bottom:6px;">🧩 단어 퀴즈</div>
+        <div id="quizQuestion" class="subtitle" style="margin-bottom:10px;">오늘 본문에서 핵심 단어를 맞혀보세요!</div>
+        <input id="quizInput" type="text" placeholder="정답 단어 입력"
+          style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:#0c1327;color:#e9edff;font-family:inherit;">
+        <div class="small" style="margin-top:6px;color:#c8d0ff;">정확한 단어를 입력해야 통과!</div>
+        <div class="btns" style="margin-top:10px;">
+          <button id="submitQuiz" class="btn ok">정답 제출</button>
+          <button id="cancelQuiz" class="btn">취소</button>
+        </div>
+      </div>
+
+      <div class="btns" style="margin-top:10px;">
+        <button id="markDoneBtn" class="btn ok">🧩 퀴즈 풀고 완료</button>
+        <button id="closePanelBtn" class="btn">닫기</button>
+      </div>
+    </div>
+  </aside>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      // --- DATA ---
+      const STAGES = [
+        {
+          id: 1, dayKo: '월', title: '성전에 올라 찬양하라', range: '시편 132–134편', exp: 100,
+          readLink: 'https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=psa&chap=132&sec=1&cVersion=&fontSize=15px&fontWeight=normal',
+          quizQ: '시편 132–134편에서 반복되는 순례시의 핵심 단어는 무엇일까요?', quizA: ['시온', '시온산']
+        },
+        {
+          id: 2, dayKo: '화', title: '바벨론 강가의 노래', range: '시편 135–137편', exp: 150,
+          readLink: 'https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=psa&chap=135&sec=1&cVersion=&fontSize=15px&fontWeight=normal',
+          quizQ: '시편 137편에서 시인들이 그리워한 도시는?', quizA: ['예루살렘']
+        },
+        {
+          id: 3, dayKo: '수', title: '주께서 나를 보호하시다', range: '시편 138–140편', exp: 200,
+          readLink: 'https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=psa&chap=138&sec=1&cVersion=&fontSize=15px&fontWeight=normal',
+          quizQ: '시편 139편의 주제: “주께서는 내 (   )를 알고 계십니다.” 빈칸은?', quizA: ['생각', '생각들']
+        },
+        {
+          id: 4, dayKo: '목', title: '시험에서 구하소서', range: '시편 141–143편', exp: 150,
+          readLink: 'https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=psa&chap=141&sec=1&cVersion=&fontSize=15px&fontWeight=normal',
+          quizQ: '시편 143편에서 시인은 무엇에서 인도해 달라고 기도할까요? 한 단어로', quizA: ['환난', '고난']
+        },
+        {
+          id: 5, dayKo: '금', title: '하나님은 나의 피난처', range: '시편 144–146편', exp: 200,
+          readLink: 'https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=psa&chap=144&sec=1&cVersion=&fontSize=15px&fontWeight=normal',
+          quizQ: '시편 144–146편에서 반복되는 감탄사는? (힌트: 찬양의 감탄)', quizA: ['할렐루야']
+        },
+        {
+          id: 6, dayKo: '토', title: '지혜의 서막', range: '시편 147편 – 잠언 1장', exp: 250,
+          readLink: 'https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=psa&chap=147&sec=1&cVersion=&fontSize=15px&fontWeight=normal',
+          quizQ: '잠언 1장 7절: 지식의 근본은 “여호와를 (   )하는 것”. 빈칸은?', quizA: ['경외']
+        },
+        {
+          id: 7, dayKo: '일', title: '지혜의 길을 선택하라', range: '잠언 2–6장', exp: 250,
+          readLink: 'https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=pro&chap=2&sec=1&cVersion=&fontSize=15px&fontWeight=normal',
+          quizQ: '잠언에서 강조하는 길은? 지혜의 (   )', quizA: ['길', '도']
+        },
+      ];
+      const STORAGE_KEY = 'bibleQuestProgress.v1';
+      const SETTINGS_KEY = 'bibleQuestSettings.v1';
+
+      // --- SETTINGS ---
+      const settings = { theme: 'dark', sound: false };
+      function loadSettings() { try { const raw = localStorage.getItem(SETTINGS_KEY); if (raw) { const o = JSON.parse(raw); settings.theme = o.theme || settings.theme; settings.sound = typeof o.sound === 'boolean' ? o.sound : settings.sound; } } catch (e) { } }
+      function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+
+      // --- STATE ---
+      const state = { cleared: new Set(), exp: 0, hp: 0, mp: 0 };
+      function loadState() { try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return; const o = JSON.parse(raw); state.cleared = new Set(o.cleared || []); state.exp = Number(o.exp || 0); state.hp = Number(o.hp || 0); state.mp = Number(o.mp || 0); } catch (e) { } }
+      function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify({ cleared: [...state.cleared], exp: state.exp, hp: state.hp, mp: state.mp })); }
+
+      // --- DOM ---
+      const introScreen = document.getElementById('introScreen');
+      const mapScreen = document.getElementById('mapScreen');
+      const stageList = document.getElementById('stageList');
+      const hpFill = document.getElementById('hpFill'), mpFill = document.getElementById('mpFill'), xpFill = document.getElementById('xpFill');
+      const hpLabel = document.getElementById('hpLabel'), mpLabel = document.getElementById('mpLabel'), xpLabel = document.getElementById('xpLabel');
+      const questPanel = document.getElementById('questPanel'), qpTitle = document.getElementById('qpTitle'), qpSub = document.getElementById('qpSub');
+      const qpRange = document.getElementById('qpRange'), qpReward = document.getElementById('qpReward'), qpReadLink = document.getElementById('qpReadLink');
+      const markDoneBtn = document.getElementById('markDoneBtn'), closePanelBtn = document.getElementById('closePanelBtn');
+      const overlay = document.getElementById('overlay'), toast = document.getElementById('toast');
+      const themeToggle = document.getElementById('themeToggle'), soundToggle = document.getElementById('soundToggle');
+      const themeLabel = document.getElementById('themeLabel'), soundLabel = document.getElementById('soundLabel');
+      const quizBox = document.getElementById('quizBox'), quizQuestion = document.getElementById('quizQuestion');
+      const quizInput = document.getElementById('quizInput'), submitQuiz = document.getElementById('submitQuiz'), cancelQuiz = document.getElementById('cancelQuiz');
+      const startBtn = document.getElementById('startBtn'), resetBtn = document.getElementById('resetBtn');
+
+      // --- AUDIO ---
+      let audioCtx = null;
+      function ensureAudio() { if (!settings.sound) return; if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } }
+      function sfx(type = 'click') {
+        if (!settings.sound || !audioCtx) return; const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination);
+        let f = 440, dur = .08; if (type === 'success') { f = 660; dur = .12 } if (type === 'error') { f = 180; dur = .18 } if (type === 'click') { f = 520; dur = .05 }
+        const now = audioCtx.currentTime; g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.2, now + .01); g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        o.frequency.value = f; o.start(now); o.stop(now + dur);
+      }
+
+      // --- TOAST & CONFETTI ---
+      function showToast(text, ms = 1200) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), ms); }
+      function confettiBurst() {
+        const colors = ['#ffd66e', '#79a6ff', '#86efac', '#fca5a5', '#a78bfa', '#f9a8d4']; for (let i = 0; i < 24; i++) {
+          const piece = document.createElement('div'); piece.className = 'confetti-piece';
+          const angle = (Math.random() * 2 - 1) * Math.PI, dist = 80 + Math.random() * 120; const dx = Math.cos(angle) * dist, dy = Math.sin(angle) * dist - 40;
+          piece.style.setProperty('--dx', `calc(-50% + ${dx}px)`); piece.style.setProperty('--dy', `calc(-50% + ${dy}px)`); piece.style.setProperty('--rot', `${(Math.random() * 720 - 360)}deg`);
+          piece.style.background = colors[i % colors.length]; document.body.appendChild(piece); setTimeout(() => piece.remove(), 800);
+        }
+      }
+      function showVictory(expText) { confettiBurst(); showToast(`🎉 VICTORY! ${expText}`); sfx('success'); if (navigator.vibrate) navigator.vibrate(50); }
+
+      // --- PREF TOGGLES ---
+      themeToggle.addEventListener('click', () => { settings.theme = (settings.theme === 'dark') ? 'light' : 'dark'; applyTheme(); saveSettings(); sfx('click'); });
+      soundToggle.addEventListener('click', () => { settings.sound = !settings.sound; if (settings.sound) { ensureAudio(); sfx('success'); } else { sfx('click'); } soundLabel.textContent = settings.sound ? 'ON' : 'OFF'; saveSettings(); });
+
+      // --- NAV BUTTONS ---
+      if (startBtn) startBtn.addEventListener('click', (e) => { e.preventDefault(); showMap(); ensureAudio(); sfx('click'); });
+      if (resetBtn) resetBtn.addEventListener('click', (e) => { e.preventDefault(); if (confirm('진행 상황을 초기화할까요?')) { state.cleared = new Set(); state.exp = state.hp = state.mp = 0; saveState(); renderAll(); showToast('초기화 완료!'); } });
+      if (closePanelBtn) closePanelBtn.addEventListener('click', () => { sfx('click'); closeQuest(); });
+      overlay.addEventListener('click', () => { sfx('click'); closeQuest(); });
+
+      // --- VIEW HELPERS ---
+      function showIntro() { introScreen.style.display = 'block'; introScreen.setAttribute('aria-hidden', 'false'); mapScreen.style.display = 'none'; mapScreen.setAttribute('aria-hidden', 'true'); }
+      function showMap() { introScreen.style.display = 'none'; introScreen.setAttribute('aria-hidden', 'true'); mapScreen.style.display = 'block'; mapScreen.setAttribute('aria-hidden', 'false'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+      function renderMeters() {
+        const totalHP = 700, totalMP = 700, totalXP = STAGES.reduce((s, st) => s + st.exp, 0);
+        const clearedCount = state.cleared.size;
+        state.hp = Math.min(totalHP, clearedCount * 100);
+        state.mp = Math.min(totalMP, clearedCount * 100);
+        hpFill.style.width = `${(state.hp / totalHP) * 100}%`; mpFill.style.width = `${(state.mp / totalMP) * 100}%`; xpFill.style.width = `${(state.exp / totalXP) * 100}%`;
+        hpLabel.textContent = `HP ${state.hp}/${totalHP}`; mpLabel.textContent = `MP ${state.mp}/${totalMP}`; xpLabel.textContent = `EXP ${state.exp}/${totalXP}`;
+      }
+
+      // ---- 🔒 요일 잠금 로직 ----
+      const params = new URLSearchParams(location.search);
+      const FREEPLAY = params.get('freeplay') === '1'; // 테스트용: ?freeplay=1 이면 잠금 해제
+      function getTodayIndex() { const jsDay = new Date().getDay(); return jsDay === 0 ? 6 : jsDay - 1; } // 월=0..일=6
+      function isUnlocked(index) { return FREEPLAY || index <= getTodayIndex(); }
+
+      function renderStages() {
+        stageList.innerHTML = '';
+        const todayIndex = getTodayIndex();
+
+        STAGES.forEach((st, idx) => {
+          const unlocked = isUnlocked(idx);
+          const row = document.createElement('div');
+          row.className = 'stage panel pixel';
+          if (idx === todayIndex) row.classList.add('today');
+          if (!unlocked) row.classList.add('locked');
+          if (state.cleared.has(st.id)) row.classList.add('cleared');
+
+          const node = Object.assign(document.createElement('div'), { className: 'node', textContent: st.dayKo });
+          const info = document.createElement('div'); info.className = 'info';
+          const lockLabel = !unlocked ? ' · 🔒 잠김' : (state.cleared.has(st.id) ? ' · ✔️ 클리어됨' : '');
+          info.innerHTML = `
+            <div class="day">Stage ${st.id} · ${st.dayKo}요일</div>
+            <div class="text">${st.range}</div>
+            <div class="reward">🏆 보상: +${st.exp} EXP <span class="clear">${lockLabel}</span></div>
+          `;
+
+          const go = document.createElement('button');
+          go.className = 'go' + (unlocked ? '' : ' lock');
+          go.textContent = unlocked ? (idx === todayIndex ? 'GO!' : '자세히') : '🔒 잠김';
+          if (!unlocked) { go.disabled = true; go.title = '해당 요일에 열립니다'; }
+
+          go.addEventListener('click', () => {
+            if (!unlocked) {
+              showToast('🔒 아직 열리지 않았어요! 해당 요일에 도전해요');
+              sfx('error'); if (navigator.vibrate) navigator.vibrate(30);
+              return;
+            }
+            sfx('click'); openQuest(st);
+          });
+
+          row.append(node, info, go);
+          stageList.appendChild(row);
+        });
+      }
+
+      function openQuest(stage) {
+        qpTitle.textContent = `MAIN QUEST · ${stage.title}`;
+        qpSub.textContent = '오늘의 본문을 읽고 완료로 표시해요!';
+        qpRange.textContent = stage.range;
+        qpReward.textContent = `+${stage.exp} EXP`;
+        qpReadLink.href = stage.readLink || '#';
+
+        quizQuestion.textContent = stage.quizQ || '오늘 본문에서 핵심 단어를 맞혀보세요!';
+        quizInput.value = ''; quizBox.classList.add('hidden'); quizInput.classList.remove('shake', 'danger');
+
+        markDoneBtn.textContent = '🧩 퀴즈 풀고 완료';
+        markDoneBtn.onclick = () => { quizBox.classList.remove('hidden'); setTimeout(() => quizInput.focus(), 0); sfx('click'); };
+
+        submitQuiz.onclick = () => {
+          const ans = (quizInput.value || '').trim().toLowerCase();
+          const accepts = Array.isArray(stage.quizA) ? stage.quizA : [stage.quizA];
+          const ok = accepts.filter(Boolean).map(s => String(s).trim().toLowerCase()).includes(ans);
+          if (ok) {
+            if (!state.cleared.has(stage.id)) { state.cleared.add(stage.id); state.exp += stage.exp; saveState(); renderAll(); }
+            showVictory(`+${stage.exp} EXP`); closeQuest();
+          } else {
+            quizInput.classList.add('shake', 'danger'); setTimeout(() => quizInput.classList.remove('shake', 'danger'), 600);
+            if (navigator.vibrate) navigator.vibrate([40, 40]); sfx('error');
+            alert('다시 생각해보세요! 본문으로 이동합니다.'); if (stage.readLink) window.open(stage.readLink, '_blank'); quizInput.focus();
+          }
+        };
+        cancelQuiz.onclick = () => { quizBox.classList.add('hidden'); sfx('click'); };
+
+        questPanel.classList.add('open'); questPanel.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('lock'); overlay.classList.add('active');
+      }
+
+      function closeQuest() { questPanel.classList.remove('open'); questPanel.setAttribute('aria-hidden', 'true'); document.body.classList.remove('lock'); overlay.classList.remove('active'); }
+
+      function renderAll() { renderStages(); renderMeters(); }
+      function applyTheme() { document.documentElement.setAttribute('data-theme', settings.theme === 'light' ? 'light' : 'dark'); themeLabel.textContent = settings.theme === 'light' ? '라이트' : '다크'; }
+
+      // --- INIT ---
+      loadSettings(); applyTheme();
+      loadState(); renderAll(); showIntro();
+      window.addEventListener('click', ensureAudio, { once: true });
+      window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeQuest(); });
+      soundLabel.textContent = settings.sound ? 'ON' : 'OFF';
+    });
+  </script>
+</body>
+
+</html>

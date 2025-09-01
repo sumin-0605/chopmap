@@ -73,7 +73,7 @@
       padding:12px; background:var(--bg-soft);
       border:1px dashed rgba(255,255,255,.18); border-radius:12px; position:relative;
     }
-    /* 오늘 강조 업그레이드 */
+    /* 오늘 강조 */
     .stage.today{
       border: 1px solid rgba(255,214,110,.95);
       box-shadow:
@@ -123,20 +123,19 @@
 
     #overlay{ position:fixed; inset:0; background:rgba(0,0,0,.8); opacity:0; pointer-events:none; transition:opacity .3s ease; z-index:40; backdrop-filter:blur(2px) }
     #overlay.active{ opacity:1; pointer-events:auto }
-    /* 힌트 모달 집중용 */
     #overlay.front{ z-index:58; background: rgba(0,0,0,.86); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
 
-    /* 바텀시트들 공통 (가챠 제거) */
-    #questPanel, #boardPanel{
+    /* 바텀시트 공통 */
+    #questPanel, #boardPanel, #rewardPanel{
       position:fixed; inset:auto 0 0 0; transform:translateY(105%);
       transition:transform .35s ease; background:#0b1228;
       border-top:1px solid rgba(255,255,255,.1); box-shadow:0 -10px 30px rgba(0,0,0,.55); z-index:50;
     }
-    #questPanel.open, #boardPanel.open{ transform:translateY(0%) }
+    #questPanel.open, #boardPanel.open, #rewardPanel.open{ transform:translateY(0%) }
 
-    /* 시트 내부 스크롤 */
     #questPanel .quest-body{ max-height:78dvh; overflow:auto }
     #boardPanel .quest-body{ max-height:78dvh; overflow:auto }
+    #rewardPanel .quest-body{ max-height:78dvh; overflow:auto }
 
     .quest-body{ padding:16px; display:grid; gap:12px }
     .quest-title{ font-size:18px; font-weight:900 }
@@ -160,7 +159,7 @@
     @keyframes shakeX{ 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
 
     .hidden{ display:none!important }
-    @supports(padding:max(0px)){ #questPanel,#boardPanel{ padding-bottom:max(14px, env(safe-area-inset-bottom)) } }
+    @supports(padding:max(0px)){ #questPanel,#boardPanel,#rewardPanel{ padding-bottom:max(14px, env(safe-area-inset-bottom)) } }
 
     .link,.link:link,.link:visited{ color:var(--accent-2); text-decoration:none; font-weight:800 }
     .link:hover{ text-decoration:underline; text-underline-offset:2px }
@@ -171,7 +170,7 @@
 
     .hud-ctrl{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; padding:8px 0 4px }
 
-    /* 힌트 모달 (오답 3회 시) */
+    /* 힌트 모달 */
     .hint-modal{
       position:fixed; left:50%; top:50%; transform:translate(-50%,-50%) scale(.96);
       width: min(92vw, 420px);
@@ -184,6 +183,41 @@
     .hint-title{ font-weight:900; margin-bottom:6px }
     .hint-text{ color:var(--ink-dim); font-size:13px; line-height:1.4 }
     .hint-btns{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px }
+
+    /* 🎁 이미지 카드 레이아웃 */
+    #rewardArt { display:grid; place-items:center; padding:18px }
+    .reward-card {
+      width: 100%;
+      max-width: 320px;
+      aspect-ratio: 16 / 11;           /* 필요시 1/1, 4/5 등으로 변경 */
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0f1526;
+      border: 1px solid rgba(255,255,255,.1);
+      box-shadow: 0 8px 20px rgba(0,0,0,.35);
+      position: relative;
+    }
+    .reward-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;               /* 이미지 꽉 채우기 */
+      display: block;
+    }
+    .reward-tag {
+      position: absolute; left: 8px; bottom: 8px;
+      background: rgba(0,0,0,.45); color: #ffd66e;
+      font-weight: 900; font-size: 12px; padding: 4px 8px; border-radius: 999px;
+      border: 1px solid rgba(255,214,110,.35);
+      backdrop-filter: blur(2px);
+    }
+
+    .reward-anim{ animation:wiggle .8s ease-in-out }
+    @keyframes wiggle{
+      0%,100%{ transform:scale(1) rotate(0deg) }
+      25%{ transform:scale(1.02) rotate(-1deg) }
+      50%{ transform:scale(1.02) rotate(1deg) }
+      75%{ transform:scale(1.02) rotate(-.6deg) }
+    }
   </style>
 </head>
 <body>
@@ -291,6 +325,22 @@
     </div>
   </aside>
 
+  <!-- 🎁 특별 보상 패널 -->
+  <aside id="rewardPanel" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="quest-body wrap">
+      <div class="quest-title">🎁 오늘의 특별 보상</div>
+      <div class="quest-sub" id="rewardStatus">퀴즈 클리어 후 보상을 받아요 · 하루 1회</div>
+
+      <div id="rewardArt" class="panel pixel"></div>
+      <div id="rewardCaption" class="subtitle" style="text-align:center;"></div>
+
+      <div class="btns">
+        <button id="claimRewardBtn" class="btn ok">✨ 특별 보상 받기</button>
+        <button id="closeRewardBtn" class="btn">닫기</button>
+      </div>
+    </div>
+  </aside>
+
   <script>
   window.addEventListener('DOMContentLoaded', () => {
     // --- DATA ---
@@ -308,11 +358,11 @@
       },
       { id:3, dayKo:'수', title:'주께서 나를 보호하시다', range:'시편 138–140편', exp:200,
         readLink:'https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=psa&chap=138&sec=1',
-        quizQ:'시편 139편의 주제: “주께서는 내 (   )을 알고 계십니다.” 빈칸은?', quizA:['생각','생각들']
+        quizQ:'시편 139편의 주제: “주께서는 내 ( ㅅㄱ )을 알고 계십니다.” 빈칸은?', quizA:['생각','생각들']
       },
       { id:4, dayKo:'목', title:'시험에서 구하소서', range:'시편 141–143편', exp:150,
         readLink:'https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=psa&chap=141&sec=1',
-        quizQ:'시편 143편에서 시인은 무엇에서 인도해 달라고 기도할까요? (한 단어)', quizA:['환난','고난']
+        quizQ:'시편 143편에서 시인은 무엇에서 인도해 달라고 기도할까요? ( ㅎㄴ / ㄱㄴ )', quizA:['환난','고난']
       },
       { id:5, dayKo:'금', title:'하나님은 나의 피난처', range:'시편 144–146편', exp:200,
         readLink:'https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=psa&chap=144&sec=1',
@@ -320,17 +370,94 @@
       },
       { id:6, dayKo:'토', title:'지혜의 서막', range:'시편 147편 – 잠언 1장', exp:250,
         readLink:'https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=psa&chap=147&sec=1',
-        quizQ:'잠언 1장 7절: 지식의 근본은 “여호와를 (   )하는 것”. 빈칸은?', quizA:['경외']
+        quizQ:'잠언 1장 7절: 지식의 근본은 “여호와를 ( ㄱㅇ )하는 것”. 빈칸은?', quizA:['경외']
       },
       { id:7, dayKo:'일', title:'지혜의 길을 선택하라', range:'잠언 2–6장', exp:250,
         readLink:'https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=pro&chap=2&sec=1',
-        quizQ:'잠언에서 강조하는 길은? (   )의 길', quizA:['지혜']
+        quizQ:'잠언에서 강조하는 길은? ( ㅈㅎ )의 길', quizA:['지혜']
       },
+    ];
+
+    /* 🎁 오늘의 버프 카드 풀 (이미지 경로만 사용) */
+    // 경로는 프로젝트 구조에 맞게 수정하세요 (예: /assets/cards/*.png)
+    const BUFF_POOL = [
+      { id:'pastor_kds', name:'강동석 목사님',
+        habit:'청년회를 이끌어주시는 초읍교회의 신흥강자. 마이크를 잡으면 찬양이 1.5배 시원해진다.',
+        stat:'mp', pct:20, img:'./img/KDS.png' },
+
+      { id:'osara', name:'오사라',
+        habit:'교회 곳곳 필요한 곳 어디든 번개처럼 날아다닌다. 열정 가득 행함으로 주위 사람들에게 도전과 용기를 준다.',
+        stat:'exp', pct:12, img:'./img/OSR.png' },
+
+      { id:'sunmin', name:'이선민',
+        habit:'청년회의 귀얌동이. 활이 스치면 마음이 자동 비브라토 모드가 된다.',
+        stat:'mp', pct:12, img:'./img/LSM.png' },
+
+      { id:'yesung', name:'이예승',
+        habit:'양 손에 덤벨 들고 통성기도로 근손실을 방지한다.(영·육 모두 득근)',
+        stat:'hp', pct:15, img:'./img/LYS.png' },
+
+      { id:'onyu', name:'김온유',
+        habit:'촘촘한 계획으로 행정국의 계획을 탄탄하게 돕는다. 함꼐하면 J력 상승!',
+        stat:'exp', pct:8, img:'./img/KOU.png' },
+
+      { id:'miji', name:'김미지',
+        habit:'포스터 하나면 청년회 분위기 120% 업! 청년회 모든 디자인의 주축!!',
+        stat:'exp', pct:8, img:'./img/KMJ.png' },
+
+      { id:'taehyun', name:'하태현',
+        habit:'테니스 코트 밖(청년회)에서도 재빠른 풋워크로 공동체를 향한 마음 초스피드 셋팅.',
+        stat:'hp', pct:10, img:'./img/HTH.png' },
+
+      { id:'hyemin', name:'김혜민',
+        habit:'초읍 교회의 상큼 비타민. 초읍교회의 권은비. 해맑은 미소로 모든 사람의 MP를 채워준다',
+        stat:'mp', pct:10, img:'./img/KHM.png' },
+
+      { id:'yudae', name:'유대영 부장집사님',
+        habit:'청년회의 든든한 기둥! 수련회 마다 식사 봉사로 모두의 HP를 든든히 채운다. (홍권사님 찬스 자동 발동)',
+        stat:'hp', pct:12, img:'./img/YDY.png' },
+
+      { id:'baek', name:'백운휘',
+        habit:'감동적인 방송팀 지휘자. 주님이 함께하시는 카메라 워크! 감동으로 줌인!!',
+        stat:'mp', pct:8, img:'./img/BUH.png' },
+
+      { id:'kimji', name:'김정임',
+        habit:'초읍 교회의 작은 폭군. 선포하면 마음이 자동으로 “아멘!”',
+        stat:'exp', pct:12, img:'./img/KJI.png' },
+
+      { id:'jiyoon', name:'이지윤',
+        habit:'첼로 저음에 마음이 잔잔—기도 몰입 게이지 ↑.',
+        stat:'mp', pct:10, img:'./img/LGY.png' },
+
+      { id:'haewon', name:'김해원',
+        habit:'선교 지도를 펴면 지혜가 곳곳에서 솟음. 그녀가 향하는 열방에서는 영적 GPS 자동 실행!',
+        stat:'exp', pct:10, img:'./img/KHO.png' },
+
+      { id:'yesle', name:'정예슬',
+        habit:'신디 건반 한 번에 영혼 충전 200%',
+        stat:'mp', pct:15, img:'./img/JYS.png' },
+
+      { id:'chaebin', name:'박채빈',
+        habit:'"에? 왜요?" 무궁무진한 호기심으로 어떤 모험도 마다하지 않음! 뜻밖의 보물들을 획득할 확률 up ',
+        stat:'exp', pct:7, img:'./img/BCB.png' },
+
+      { id:'hyosul', name:'강효슬',
+        habit:'알잘딱 일처리 순삭! “언니(누나) 도울 거 있어요?” 하면 이미 끝나있음!',
+        stat:'hp', pct:8, img:'./img/KHS.png' },
+
+      { id:'hwayon', name:'도화연',
+        habit:'항상 어딘가 지쳐있음. 하지만 다른 지체들의 마음은 그녀의 따뜻한 관심으로 인해 힐링중! 달처럼 잔잔하게 휴식 모드를 켜준다',
+        stat:'hp', pct:8, img:'./img/DHY.png' },
+
+      { id:'sunghoon', name:'장성훈',
+        habit:'햇살같은 따뜻한 미소와 어디든 빠지지 않는 열정이 보는 사람까지 따뜻하게 만들어버린다.',
+        stat:'mp', pct:8, img:'./img/JSH.png' },
     ];
 
     const STORAGE_KEY = 'bibleQuestProgress.v2'; // 진행/스탯
     const SETTINGS_KEY = 'bibleQuestSettings.v1';
     const LEADER_KEY   = 'bibleQuestLeaderboard.v1';
+    const BUFF_KEY     = 'bibleQuestBuff.v1'; // { date:'YYYY-MM-DD', id:'...' }
 
     // --- SETTINGS ---
     const settings = { sound:false, showStats:false, nickname:'게스트' };
@@ -380,10 +507,34 @@
       }));
     }
 
+    // --- 오늘 버프 상태 ---
+    const buffState = { date:null, id:null };
+    function loadBuff(){
+      try{
+        const raw = localStorage.getItem(BUFF_KEY);
+        if (raw){
+          const o = JSON.parse(raw);
+          buffState.date = o.date || null;
+          buffState.id   = o.id   || null;
+        }
+      }catch(e){}
+    }
+    function saveBuff(){
+      localStorage.setItem(BUFF_KEY, JSON.stringify({
+        date: buffState.date, id: buffState.id
+      }));
+    }
+    const localYMD = (d=new Date())=>{
+      const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${da}`;
+    };
+    const hasBuffToday = ()=> buffState.date===localYMD();
+    const activeBuff = ()=> hasBuffToday() ? BUFF_POOL.find(b=>b.id===buffState.id) : null;
+
     // --- DOM 캐시 ---
     const introScreen = document.getElementById('introScreen');
-    const mapScreen = document.getElementById('mapScreen');
-    const stageList = document.getElementById('stageList');
+    const mapScreen   = document.getElementById('mapScreen');
+    const stageList   = document.getElementById('stageList');
 
     const hpFill = document.getElementById('hpFill'), mpFill = document.getElementById('mpFill'), xpFill = document.getElementById('xpFill');
     const hpLabel = document.getElementById('hpLabel'), mpLabel = document.getElementById('mpLabel'), xpLabel = document.getElementById('xpLabel');
@@ -407,6 +558,14 @@
     const nameBtn = document.getElementById('nameBtn'); const nameLabel = document.getElementById('nameLabel');
     const boardBtn = document.getElementById('boardBtn'); const boardPanel = document.getElementById('boardPanel');
     const boardList = document.getElementById('boardList'); const closeBoardBtn = document.getElementById('closeBoardBtn');
+
+    // 보상 DOM
+    const rewardPanel   = document.getElementById('rewardPanel');
+    const rewardArt     = document.getElementById('rewardArt');
+    const rewardCaption = document.getElementById('rewardCaption');
+    const rewardStatus  = document.getElementById('rewardStatus');
+    const claimRewardBtn= document.getElementById('claimRewardBtn');
+    const closeRewardBtn= document.getElementById('closeRewardBtn');
 
     // 힌트
     const hintModal = document.getElementById('hintModal');
@@ -434,7 +593,9 @@
         const el=document.createElement('div'); el.className='confetti-piece';
         const ang=(Math.random()*2-1)*Math.PI, dist=80+Math.random()*120;
         const dx=Math.cos(ang)*dist, dy=Math.sin(ang)*dist-40;
-        el.style.setProperty('--dx',`calc(-50% + ${dx}px)`); el.style.setProperty('--dy',`calc(-50% + ${dy}px)`); el.style.setProperty('--rot',`${(Math.random()*720-360)}deg`);
+        el.style.setProperty('--dx',`calc(-50% + ${dx}px)`); 
+        el.style.setProperty('--dy',`calc(-50% + ${dy}px)`); 
+        el.style.setProperty('--rot',`${(Math.random()*720-360)}deg`);
         el.style.background=colors[i%colors.length]; document.body.appendChild(el); setTimeout(()=>el.remove(),800);
       }
     }
@@ -458,7 +619,7 @@
       }
     });
     if (closePanelBtn) closePanelBtn.addEventListener('click',()=>{ sfx('click'); closeQuest(); });
-    overlay.addEventListener('click',()=>{ sfx('click'); closeQuest(); closeBoard(); closeHint(); });
+    overlay.addEventListener('click',()=>{ sfx('click'); closeQuest(); closeBoard(); closeReward(); closeHint(); });
 
     function showIntro(){ introScreen.style.display='block'; introScreen.setAttribute('aria-hidden','false'); mapScreen.style.display='none'; mapScreen.setAttribute('aria-hidden','true'); }
     function showMap(){ introScreen.style.display='none'; introScreen.setAttribute('aria-hidden','true'); mapScreen.style.display='block'; mapScreen.setAttribute('aria-hidden','false'); window.scrollTo({top:0, behavior:'smooth'}); }
@@ -467,9 +628,25 @@
     function renderMeters(){
       const totalHP=700, totalMP=700, totalXP=STAGES.reduce((s,st)=>s+st.exp,0);
       const c=state.cleared.size;
-      state.hp=Math.min(totalHP, c*100); state.mp=Math.min(totalMP, c*100);
-      hpFill.style.width=`${(state.hp/totalHP)*100}%`; mpFill.style.width=`${(state.mp/totalMP)*100}%`; xpFill.style.width=`${(state.exp/totalXP)*100}%`;
-      hpLabel.textContent=`HP ${state.hp}/${totalHP}`; mpLabel.textContent=`MP ${state.mp}/${totalMP}`; xpLabel.textContent=`EXP ${state.exp}/${totalXP}`;
+      const baseHP=Math.min(totalHP, c*100);
+      const baseMP=Math.min(totalMP, c*100);
+      const baseXP=state.exp;
+
+      const buff = activeBuff();
+      let hp=baseHP, mp=baseMP, xp=baseXP;
+      if (buff){
+        if (buff.stat==='hp') hp = Math.min(totalHP, Math.round(baseHP*(1+buff.pct/100)));
+        if (buff.stat==='mp') mp = Math.min(totalMP, Math.round(baseMP*(1+buff.pct/100)));
+        if (buff.stat==='exp') xp = Math.min(totalXP, Math.round(baseXP*(1+buff.pct/100)));
+      }
+
+      state.hp=baseHP; state.mp=baseMP; // 저장값은 기본값 유지
+
+      hpFill.style.width=`${(hp/totalHP)*100}%`; mpFill.style.width=`${(mp/totalMP)*100}%`; xpFill.style.width=`${(xp/totalXP)*100}%`;
+      const hpNote = buff && buff.stat==='hp' ? ` (+${buff.pct}%)` : '';
+      const mpNote = buff && buff.stat==='mp' ? ` (+${buff.pct}%)` : '';
+      const xpNote = buff && buff.stat==='exp'? ` (+${buff.pct}%)` : '';
+      hpLabel.textContent=`HP ${hp}/${totalHP}${hpNote}`; mpLabel.textContent=`MP ${mp}/${totalMP}${mpNote}`; xpLabel.textContent=`EXP ${xp}/${totalXP}${xpNote}`;
     }
 
     // --- 요일 잠금 ---
@@ -547,7 +724,7 @@
       }
 
       function renderQuiz(){
-        wrongStreak=0; // 새 문제 시작 시 리셋
+        wrongStreak=0;
         quizQuestion.textContent=`문제 ${qIndex+1}/${quizzes.length} · ${quizzes[qIndex].q}`;
         quizInput.value=''; quizInput.classList.remove('shake','danger');
       }
@@ -558,7 +735,7 @@
         const hint = cur.h || autoHintFromAnswer(firstAccept);
         hintText.textContent = hint;
         readAgainBtn.href = stage.readLink || '#';
-        overlay.classList.add('active','front'); // 더 어둡게
+        overlay.classList.add('active','front');
         hintModal.classList.remove('hidden');
         setTimeout(()=>hintModal.classList.add('show'),10);
       }
@@ -579,7 +756,9 @@
           else{
             if (!state.cleared.has(stage.id)){ state.cleared.add(stage.id); state.exp+=stage.exp; saveState(); renderAll(); }
             showVictory(`+${stage.exp} EXP`); actionBtns.classList.remove('hidden'); closeQuest(); upsertMyScore();
-            // 가챠 기능 제거됨: 추가 동작 없음
+
+            // 🎁 오늘의 특별 보상: 자동으로 패널만 열기 (클레임은 버튼으로)
+            openReward();
           }
         }else{
           wrongStreak++;
@@ -587,8 +766,8 @@
           if (navigator.vibrate) navigator.vibrate([40,40]); sfx('error');
 
           if (wrongStreak>=3){
-            wrongStreak=0; // 한 번 띄운 뒤 다시 누적
-            showHint();     // 중앙 힌트 모달
+            wrongStreak=0;
+            showHint();
           }else{
             showToast('앗! 다시 시도해봐요');
           }
@@ -608,7 +787,7 @@
     function closeQuest(){
       questPanel.classList.remove('open'); questPanel.setAttribute('aria-hidden','true');
       quizBox.classList.add('hidden'); actionBtns.classList.remove('hidden');
-      if (!boardPanel.classList.contains('open') && !hintModal.classList.contains('show')) {
+      if (!boardPanel.classList.contains('open') && !rewardPanel.classList.contains('open') && !hintModal.classList.contains('show')) {
         overlay.classList.remove('active'); document.body.classList.remove('lock');
       }
     }
@@ -667,7 +846,7 @@
     }
     function closeBoard(){
       boardPanel.classList.remove('open'); boardPanel.setAttribute('aria-hidden','true');
-      if (!questPanel.classList.contains('open') && !hintModal.classList.contains('show')) {
+      if (!questPanel.classList.contains('open') && !rewardPanel.classList.contains('open') && !hintModal.classList.contains('show')) {
         overlay.classList.remove('active'); document.body.classList.remove('lock');
       }
     }
@@ -677,18 +856,107 @@
     // --- 힌트 닫기 (ESC/오버레이) ---
     function closeHint(){
       hintModal.classList.remove('show');
-      overlay.classList.remove('front'); // 진하게 올린거 해제
+      overlay.classList.remove('front');
       setTimeout(()=>hintModal.classList.add('hidden'),150);
     }
 
+    // === 🎁 특별 보상 로직 ===
+    function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)] }
+
+    // 이미지 카드 렌더러 (img가 없으면 안내)
+    function rewardCardHtml(item){
+      if (item.img) {
+        return `
+          <div class="reward-card">
+            <img src="${item.img}" alt="${item.name} 카드" loading="lazy" />
+            <div class="reward-tag">${item.name}</div>
+          </div>
+        `;
+      }
+      return `
+        <div class="reward-card" style="display:grid;place-items:center;">
+          <div style="color:#c8d0ff; font-size:13px; opacity:.9;">이미지를 준비해 넣어주세요</div>
+        </div>
+      `;
+    }
+
+    function renderRewardCard(item){
+      rewardArt.innerHTML = rewardCardHtml(item);
+      const statKo = item.stat==='hp'?'HP(믿음)':
+                     item.stat==='mp'?'MP(기도력)':'EXP(지혜)';
+      rewardCaption.innerHTML = `
+        <div style="text-align:center">
+          <div style="font-weight:900;margin-bottom:6px;">${item.name} 카드</div>
+          <div class="subtitle" style="opacity:.95">특S급 능력치 ㅣ<strong>${item.habit}</strong></div>
+          <div style="margin-top:8px;font-weight:900;color:#ffd66e">24시간 동안 ${statKo} <span style="white-space:nowrap;">+${item.pct}%</span> 증가!</div>
+        </div>
+      `;
+    }
+
+    function openReward(){
+      refreshRewardUI();
+      rewardPanel.classList.add('open'); rewardPanel.setAttribute('aria-hidden','false');
+      overlay.classList.add('active'); document.body.classList.add('lock');
+      const body = rewardPanel.querySelector('.quest-body'); if (body) body.scrollTop = 0;
+    }
+
+    function refreshRewardUI(){
+      const buff = activeBuff();
+      if (buff){
+        rewardStatus.textContent = `오늘 보상 수령 완료! (다시 받기는 자정 이후)`;
+        claimRewardBtn.disabled = true; claimRewardBtn.textContent = '내일 다시';
+        renderRewardCard(buff);
+      }else{
+        rewardStatus.textContent = '퀴즈 클리어 후 보상을 받아요 · 하루 1회';
+        claimRewardBtn.disabled = false; claimRewardBtn.textContent = '✨ 특별 보상 받기';
+        // 안내 Placeholder
+        rewardArt.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120">
+            <rect width="100%" height="100%" fill="#0b1228"/>
+            <text x="160" y="64" fill="#ffd66e" font-size="16" text-anchor="middle" font-family="Galmuri11, system-ui">버튼을 눌러 오늘의 카드를 받으세요!</text>
+          </svg>`;
+        rewardCaption.textContent = '';
+      }
+    }
+
+    function closeReward(){
+      rewardPanel.classList.remove('open'); rewardPanel.setAttribute('aria-hidden','true');
+      if (!questPanel.classList.contains('open') && !boardPanel.classList.contains('open') && !hintModal.classList.contains('show')) {
+        overlay.classList.remove('active'); document.body.classList.remove('lock');
+      }
+    }
+
+    function claimRewardOnce(){
+      if (hasBuffToday()){ showToast('오늘 보상은 이미 받았어요!'); return; }
+      rewardArt.classList.add('reward-anim');
+      setTimeout(()=>rewardArt.classList.remove('reward-anim'), 850);
+
+      const item = pickRandom(BUFF_POOL);
+      setTimeout(()=>{
+        buffState.date = localYMD();
+        buffState.id   = item.id;
+        saveBuff();
+        renderRewardCard(item);
+        refreshRewardUI();
+        renderMeters(); // 버프 반영
+        sfx('success'); if (navigator.vibrate) navigator.vibrate(35);
+        showToast('🎉 오늘의 특별 보상 도착!');
+        confettiBurst();
+      }, 420);
+    }
+
+    // 보상 버튼
+    claimRewardBtn.addEventListener('click', ()=>{ sfx('click'); claimRewardOnce(); });
+    closeRewardBtn.addEventListener('click', ()=>{ sfx('click'); closeReward(); });
+
     // --- INIT ---
-    loadSettings(); loadState();
+    loadSettings(); loadState(); loadBuff();
     renderAll(); showIntro();
     applyStatsVisibility(); applyNameUI(); ensureLeaderboardSeed(); upsertMyScore();
     window.addEventListener('click', ensureAudio, { once:true });
     window.addEventListener('keydown', (e)=>{
       if (e.key==='Escape'){
-        closeQuest(); closeBoard(); closeHint();
+        closeQuest(); closeBoard(); closeReward(); closeHint();
       }
     });
     soundLabel.textContent = settings.sound ? 'ON' : 'OFF';
